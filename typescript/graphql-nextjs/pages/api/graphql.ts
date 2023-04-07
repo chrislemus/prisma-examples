@@ -1,20 +1,20 @@
-import { createYoga } from 'graphql-yoga'
-import SchemaBuilder from "@pothos/core";
-import PrismaPlugin from "@pothos/plugin-prisma";
-import { DateTimeResolver } from 'graphql-scalars'
+import { createYoga } from "graphql-yoga"
+import SchemaBuilder from "@pothos/core"
+import PrismaPlugin from "@pothos/plugin-prisma"
+import { DateTimeResolver } from "graphql-scalars"
 
-import type PrismaTypes from "@pothos/plugin-prisma/generated";
-import type { NextApiRequest, NextApiResponse } from 'next'
+import type PrismaTypes from "@pothos/plugin-prisma/generated"
+import type { NextApiRequest, NextApiResponse } from "next"
 
-import prisma from '../../lib/prisma'
+import prisma from "../../lib/prisma"
 
 const builder = new SchemaBuilder<{
-  PrismaTypes: PrismaTypes;
+  PrismaTypes: PrismaTypes
 }>({
   plugins: [PrismaPlugin],
   prisma: {
     client: prisma,
-  }
+  },
 })
 
 builder.queryType({})
@@ -22,38 +22,47 @@ builder.queryType({})
 builder.mutationType({})
 
 builder.prismaObject("User", {
-  fields: (t) => ({
-    id: t.exposeID('id'),
-    email: t.exposeString('email'),
-    name: t.exposeString('name', { nullable: true }),
-    posts: t.relation("posts")
-  })
+  fields: t => ({
+    id: t.exposeID("id"),
+    email: t.exposeString("email"),
+    name: t.exposeString("name", { nullable: true }),
+    posts: t.relation("posts"),
+    profile: t.relation("profile", { nullable: true }),
+  }),
+})
+
+builder.prismaObject("Profile", {
+  fields: t => ({
+    id: t.exposeInt("id"),
+    bio: t.exposeString("bio", { nullable: true }),
+    user: t.relation("user"),
+  }),
 })
 
 builder.prismaObject("Post", {
-  fields: (t) => ({
-    id: t.exposeID('id'),
-    title: t.exposeString('title'),
-    content: t.exposeString('content', { nullable: true }),
-    published: t.exposeBoolean('published'),
-    author: t.relation('author')
-  })
+  fields: t => ({
+    id: t.exposeID("id"),
+    title: t.exposeString("title"),
+    content: t.exposeString("content", { nullable: true }),
+    published: t.exposeBoolean("published"),
+    author: t.relation("author"),
+  }),
 })
 
-builder.queryField('feed', (t) =>
+builder.queryField("feed", t =>
   t.prismaField({
-    type: ['Post'],
+    type: ["Post"],
     resolve: async (query, _parent, _args, _info) =>
       prisma.post.findMany({
         ...query,
-        where: { published: true }
-      })
+        where: { published: true },
+      }),
   })
 )
 
-builder.queryField('post', (t) =>
+builder.queryField("post", t =>
   t.prismaField({
-    type: 'Post',
+    type: "Post",
     args: {
       id: t.arg.id({ required: true }),
     },
@@ -62,49 +71,49 @@ builder.queryField('post', (t) =>
       prisma.post.findUnique({
         ...query,
         where: {
-          id: Number(args.id)
-        }
-      })
+          id: Number(args.id),
+        },
+      }),
   })
 )
 
-builder.queryField('drafts', (t) =>
+builder.queryField("drafts", t =>
   t.prismaField({
-    type: ['Post'],
+    type: ["Post"],
     resolve: async (query, _parent, _args, _info) =>
       prisma.post.findMany({
         ...query,
-        where: { published: false }
-      })
+        where: { published: false },
+      }),
   })
 )
 
-builder.queryField('filterPosts', (t) =>
+builder.queryField("filterPosts", t =>
   t.prismaField({
-    type: ['Post'],
+    type: ["Post"],
     args: {
-      searchString: t.arg.string({ required: false })
+      searchString: t.arg.string({ required: false }),
     },
     resolve: async (query, _parent, args, _info) => {
       const or = args.searchString
         ? {
-          OR: [
-            { title: { contains: args.searchString } },
-            { content: { contains: args.searchString } },
-          ],
-        }
+            OR: [
+              { title: { contains: args.searchString } },
+              { content: { contains: args.searchString } },
+            ],
+          }
         : {}
       return prisma.post.findMany({
         ...query,
-        where: { ...or }
+        where: { ...or },
       })
-    }
+    },
   })
 )
 
-builder.mutationField('signupUser', (t) =>
+builder.mutationField("signupUser", t =>
   t.prismaField({
-    type: 'User',
+    type: "User",
     args: {
       name: t.arg.string({ required: false }),
       email: t.arg.string({ required: true }),
@@ -114,15 +123,15 @@ builder.mutationField('signupUser', (t) =>
         ...query,
         data: {
           email: args.email,
-          name: args.name
-        }
-      })
+          name: args.name,
+        },
+      }),
   })
 )
 
-builder.mutationField('deletePost', (t) =>
+builder.mutationField("deletePost", t =>
   t.prismaField({
-    type: 'Post',
+    type: "Post",
     args: {
       id: t.arg.id({ required: true }),
     },
@@ -131,14 +140,14 @@ builder.mutationField('deletePost', (t) =>
         ...query,
         where: {
           id: Number(args.id),
-        }
-      })
+        },
+      }),
   })
 )
 
-builder.mutationField('publish', (t) =>
+builder.mutationField("publish", t =>
   t.prismaField({
-    type: 'Post',
+    type: "Post",
     args: {
       id: t.arg.id({ required: true }),
     },
@@ -150,14 +159,14 @@ builder.mutationField('publish', (t) =>
         },
         data: {
           published: true,
-        }
-      })
+        },
+      }),
   })
 )
 
-builder.mutationField('createDraft', (t) =>
+builder.mutationField("createDraft", t =>
   t.prismaField({
-    type: 'Post',
+    type: "Post",
     args: {
       title: t.arg.string({ required: true }),
       content: t.arg.string(),
@@ -170,10 +179,10 @@ builder.mutationField('createDraft', (t) =>
           title: args.title,
           content: args.content,
           author: {
-            connect: { email: args.authorEmail }
-          }
-        }
-      })
+            connect: { email: args.authorEmail },
+          },
+        },
+      }),
   })
 )
 
@@ -184,11 +193,11 @@ export default createYoga<{
   res: NextApiResponse
 }>({
   schema,
-  graphqlEndpoint: '/api/graphql'
+  graphqlEndpoint: "/api/graphql",
 })
 
 export const config = {
   api: {
-    bodyParser: false
-  }
+    bodyParser: false,
+  },
 }
